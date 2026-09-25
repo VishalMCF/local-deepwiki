@@ -3,6 +3,7 @@ import { MessageRole, MessageStatus } from '@prisma/client';
 import { Observable, concat, from, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AgentService } from '../agents/agent.service';
+import { cleanAnswer } from '../common/answer.util';
 import { parseCitations, verifyCitations } from '../common/citations.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { askPrompt } from './prompts';
@@ -165,12 +166,13 @@ export class ChatService {
         },
       );
 
-      const citations = verifyCitations(parseCitations(result.text), result.scannedFiles);
+      const answer = cleanAnswer(result.text);
+      const citations = verifyCitations(parseCitations(answer), result.scannedFiles);
 
       const saved = await this.prisma.message.update({
         where: { id: messageId },
         data: {
-          content: result.text,
+          content: answer,
           status: MessageStatus.COMPLETE,
           scannedFiles: result.scannedFiles,
           sessionId: result.sessionId ?? null,

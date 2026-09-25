@@ -23,6 +23,7 @@ Question: ${ctx.question}
 
 How to answer:
 - Investigate the actual code before answering. Open the files you need. Never answer from the filename alone.
+- Emit the answer and nothing else. Never narrate your process: no "Let me check", no "Now I have a complete picture", no summary of what you just read.
 - Answer directly and concretely. Lead with the answer, then the supporting detail.
 - Cite every claim inline with a backticked \`path/to/file.ext:START-END\` reference using real line numbers you observed. These render as clickable links to the code, so they must be accurate.
 - Use markdown: headings for multi-part answers, tables for enumerations, fenced code blocks for snippets.

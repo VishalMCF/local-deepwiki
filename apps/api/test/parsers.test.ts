@@ -5,6 +5,7 @@ import { parseStreamJsonLine } from '../src/agents/runners/stream-json.parser';
 import { parseCitations, verifyCitations } from '../src/common/citations.util';
 import { toRepoRelative } from '../src/agents/agent.service';
 import { cleanMarkdown } from '../src/wiki/indexer.service';
+import { cleanAnswer } from '../src/common/answer.util';
 
 describe('extractJson', () => {
   it('reads a fenced json block surrounded by prose', () => {
@@ -187,5 +188,44 @@ describe('extensionless citation paths', () => {
     expect(parseCitations('Sources: src/main.go:10-20')).toEqual([
       { path: 'src/main.go', startLine: 10, endLine: 20 },
     ]);
+  });
+});
+
+describe('cleanAnswer', () => {
+  it('drops a leading narration line', () => {
+    expect(cleanAnswer('Now I have a complete picture.\n\n## Packages\n\nBody.')).toBe(
+      '## Packages\n\nBody.',
+    );
+  });
+
+  it('leaves an answer that starts with a heading alone', () => {
+    const a = '## Packages\n\nBody.';
+    expect(cleanAnswer(a)).toBe(a);
+  });
+
+  it('leaves a normal sentence alone', () => {
+    const a = 'The master server owns the LevelDB index.';
+    expect(cleanAnswer(a)).toBe(a);
+  });
+
+  it('never empties the answer', () => {
+    expect(cleanAnswer('Let me check.')).toBe('Let me check.');
+  });
+});
+
+describe('verifyCitations directory scope', () => {
+  it('counts a searched directory as covering files beneath it', () => {
+    const [c] = verifyCitations([{ path: 'src/main.go', startLine: 3, endLine: 14 }], ['src']);
+    expect(c.verified).toBe(true);
+  });
+
+  it('does not let one directory verify a file outside it', () => {
+    const [c] = verifyCitations([{ path: 'tools/s3test.py' }], ['src']);
+    expect(c.verified).toBe(false);
+  });
+
+  it('still verifies an exactly-read file', () => {
+    const [c] = verifyCitations([{ path: 'src/lib.go' }], ['src/lib.go']);
+    expect(c.verified).toBe(true);
   });
 });

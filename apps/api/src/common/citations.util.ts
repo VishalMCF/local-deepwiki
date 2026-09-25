@@ -82,17 +82,31 @@ function dedupe(items: ParsedCitation[]): ParsedCitation[] {
 }
 
 /**
- * Cross-check cited paths against the files the agent actually opened.
- * A citation the agent never read is suspect (hallucinated path), and is stored
- * with verified=false so the UI can mark it.
+ * Cross-check cited paths against what the agent actually opened. A citation the
+ * agent never touched is suspect (hallucinated path) and is stored with
+ * verified=false so the UI can mark it.
+ *
+ * A Grep or Glob reports the directory it searched rather than each file it
+ * matched, so a scanned directory counts as covering the files beneath it —
+ * otherwise a perfectly sound answer built from one `grep -r src/` would have
+ * every citation flagged.
  */
 export function verifyCitations(
   citations: ParsedCitation[],
   scannedFiles: string[],
 ): (ParsedCitation & { verified: boolean })[] {
   const scanned = scannedFiles.map((f) => normalizePath(f));
-  return citations.map((c) => ({
-    ...c,
-    verified: scanned.some((s) => s === c.path || s.endsWith(`/${c.path}`) || c.path.endsWith(s)),
-  }));
+  return citations.map((c) => ({ ...c, verified: covers(scanned, c.path) }));
+}
+
+function covers(scanned: string[], path: string): boolean {
+  return scanned.some((s) => {
+    if (!s) return false;
+    if (s === path) return true;
+    // Same file reached by a longer or shorter prefix.
+    if (s.endsWith(`/${path}`) || path.endsWith(`/${s}`)) return true;
+    // A searched directory covers everything under it.
+    if (!s.includes('.') && path.startsWith(`${s}/`)) return true;
+    return false;
+  });
 }
