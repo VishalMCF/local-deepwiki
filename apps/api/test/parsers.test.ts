@@ -4,6 +4,7 @@ import { filePathFromCommand, parseCodexLine } from '../src/agents/runners/codex
 import { parseStreamJsonLine } from '../src/agents/runners/stream-json.parser';
 import { parseCitations, verifyCitations } from '../src/common/citations.util';
 import { toRepoRelative } from '../src/agents/agent.service';
+import { cleanMarkdown } from '../src/wiki/indexer.service';
 
 describe('extractJson', () => {
   it('reads a fenced json block surrounded by prose', () => {
@@ -151,5 +152,40 @@ describe('toRepoRelative', () => {
   });
   it('drops paths outside the repo', () => {
     expect(toRepoRelative(root, '/etc/passwd')).toBeNull();
+  });
+});
+
+describe('cleanMarkdown', () => {
+  it('drops a conversational preamble before the first heading', () => {
+    const out = cleanMarkdown('Have enough. Writing the page now.\n\n# Overview\n\nBody.');
+    expect(out).toBe('# Overview\n\nBody.');
+  });
+
+  it('unwraps a page the agent wrapped in a markdown fence', () => {
+    expect(cleanMarkdown('```markdown\n# Title\n\nBody.\n```')).toBe('# Title\n\nBody.');
+  });
+
+  it('leaves a well-formed page untouched', () => {
+    const md = '# Title\n\nBody with a # hash inside.';
+    expect(cleanMarkdown(md)).toBe(md);
+  });
+});
+
+describe('extensionless citation paths', () => {
+  it('captures a file with no extension when line numbers are present', () => {
+    const cites = parseCitations('Sources: volume:42-60, Dockerfile:1-9');
+    expect(cites).toContainEqual({ path: 'volume', startLine: 42, endLine: 60 });
+    expect(cites).toContainEqual({ path: 'Dockerfile', startLine: 1, endLine: 9 });
+  });
+
+  it('still rejects bare prose words with no line numbers', () => {
+    const cites = parseCitations('Sources: something, other');
+    expect(cites).toHaveLength(0);
+  });
+
+  it('does not double-count the path part of a path:line ref', () => {
+    expect(parseCitations('Sources: src/main.go:10-20')).toEqual([
+      { path: 'src/main.go', startLine: 10, endLine: 20 },
+    ]);
   });
 });

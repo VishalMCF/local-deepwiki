@@ -55,13 +55,21 @@ Reply with a short paragraph describing the system, then a single fenced json bl
 \`\`\``;
 }
 
+export interface PageLink {
+  title: string;
+  slug: string;
+}
+
 export interface PageContext {
   repoName: string;
   repoPath: string;
   title: string;
   summary?: string;
   hint?: string;
-  outlineTitles: string[];
+  /** Every page in the wiki, so the writer can cross-link instead of repeating. */
+  siblings: PageLink[];
+  /** Subsections of this page; their detail belongs to them, not here. */
+  children: PageLink[];
   parentTitle?: string;
 }
 
@@ -74,22 +82,31 @@ Page to write: "${ctx.title}"${ctx.parentTitle ? ` (a subsection of "${ctx.paren
 ${ctx.summary ? `Scope: ${ctx.summary}` : ''}
 ${ctx.hint ? `Guidance: ${ctx.hint}` : ''}
 
-Other pages in this wiki (link to them with markdown links to their slug, e.g. [Architecture](architecture)); do NOT duplicate their content:
-${ctx.outlineTitles.join(', ')}
+Other pages in this wiki. Link to one as a markdown link to its slug, e.g. [Master Server](master-server). Do NOT duplicate their content:
+${ctx.siblings.map((p) => `- ${p.title} -> ${p.slug}`).join('\n')}
+${
+  ctx.children.length
+    ? `\nThis page has subsections of its own:\n${ctx.children
+        .map((p) => `- ${p.title} -> ${p.slug}`)
+        .join('\n')}\nGive the high-level picture here and hand the details to them by name and link. Do not go deep into anything a subsection owns.`
+    : ''
+}
 
 Read the relevant source files before writing. Every factual claim must come from code you actually opened.
 
-Output format — markdown only, no preamble, no "here is the page":
+Output format — markdown only. Emit the page and nothing else: no preamble, no "here is the page", no note about what you are about to do.
 1. Start with an H1: "# ${ctx.title}".
-2. Use H2/H3 for sections. Write in the present tense, third person, technical register. No marketing language.
-3. Explain mechanisms, not just names: how data moves, what calls what, what the invariants are.
-4. Include at least one mermaid diagram where a structure or flow benefits from it, fenced as \`\`\`mermaid. Use graph TD / sequenceDiagram / flowchart. Keep node labels short; put the file name in the label when it identifies a component, e.g. "Master Server (src/server.go)".
-5. Use markdown tables for API surfaces, config options and enumerations.
-6. Reference code inline as backticked \`path/to/file.ext:START-END\` using real line numbers you observed.
-7. After EVERY H2 section, add a line exactly of the form:
+2. Follow the H1 with one orientation paragraph: what this page covers, and where to go for adjacent topics, written as markdown links to the pages listed above.
+3. Then a high-level section that names the moving parts before any implementation detail. Enumerate the core components as a numbered list when there is a small fixed set of them.
+4. Use H2/H3 for sections. Write in the present tense, third person, technical register. No marketing language.
+5. Explain mechanisms, not just names: how data moves, what calls what, what the invariants are.
+6. Include at least one mermaid diagram where a structure or flow benefits from it, fenced as \`\`\`mermaid. Use graph TD / sequenceDiagram / flowchart. Keep node labels short; put the file name in the label when it identifies a component, e.g. "Master Server (src/server.go)".
+7. Use markdown tables for API surfaces, config options and enumerations.
+8. Reference code inline as backticked \`path/to/file.ext:START-END\` using real line numbers you observed.
+9. After EVERY H2 section, add a line exactly of the form:
    Sources: path/to/file.ext:12-48, other/file.ext:5-7
    listing the files and line ranges that section is derived from. Paths must be relative to the repo root. Never invent a path or a line range.
-8. Do not include a "Sources" heading, a table of contents, or a conclusion section.
+10. Do not include a "Sources" heading, a table of contents, or a conclusion section.
 
 Target length: 400-900 words for a child page, 600-1400 for a top-level page.`;
 }

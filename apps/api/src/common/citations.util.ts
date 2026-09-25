@@ -11,7 +11,16 @@ export interface ParsedCitation {
  * citation survives even when the model drifts from one convention.
  */
 const SOURCES_LINE = /^[ \t]*Sources?:[ \t]*(.+)$/gim;
-const REF = /([A-Za-z0-9_\-./]+\.[A-Za-z0-9]{1,10}|[A-Za-z0-9_\-./]*\/[A-Za-z0-9_\-.]+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?/g;
+
+/**
+ * Two shapes of reference:
+ *  - with line numbers, any token is a path (catches extensionless files such
+ *    as `volume`, `Dockerfile`, `Makefile`): `volume:42-60`
+ *  - without line numbers, the token must look like a path (have an extension
+ *    or a slash), or prose would match.
+ */
+const REF_WITH_LINES = /([A-Za-z0-9_\-./]+):(\d+)(?:\s*[-–]\s*(\d+))?/g;
+const REF_BARE = /([A-Za-z0-9_\-./]+\.[A-Za-z0-9]{1,10}|[A-Za-z0-9_\-./]*\/[A-Za-z0-9_\-.]+)/g;
 
 export function parseCitations(markdown: string): ParsedCitation[] {
   const found: ParsedCitation[] = [];
@@ -28,14 +37,26 @@ export function parseCitations(markdown: string): ParsedCitation[] {
 }
 
 function collect(segment: string, out: ParsedCitation[]) {
-  for (const m of segment.matchAll(REF)) {
+  const consumed: [number, number][] = [];
+
+  for (const m of segment.matchAll(REF_WITH_LINES)) {
     const path = normalizePath(m[1]);
     if (!path || isNoise(path)) continue;
+    consumed.push([m.index!, m.index! + m[0].length]);
     out.push({
       path,
-      startLine: m[2] ? Number(m[2]) : undefined,
-      endLine: m[3] ? Number(m[3]) : m[2] ? Number(m[2]) : undefined,
+      startLine: Number(m[2]),
+      endLine: m[3] ? Number(m[3]) : Number(m[2]),
     });
+  }
+
+  for (const m of segment.matchAll(REF_BARE)) {
+    const start = m.index!;
+    // Skip tokens already captured as part of a path:line reference.
+    if (consumed.some(([from, to]) => start >= from && start < to)) continue;
+    const path = normalizePath(m[1]);
+    if (!path || isNoise(path)) continue;
+    out.push({ path });
   }
 }
 

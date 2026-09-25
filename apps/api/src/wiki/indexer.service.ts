@@ -93,16 +93,18 @@ export class IndexerService {
         this.emit(repoId, 'log', { message: 'No pages needed regeneration.' });
       }
 
-      const allTitles = (
-        await this.prisma.wikiPage.findMany({ where: { repoId }, select: { title: true } })
-      ).map((p) => p.title);
+      const allPages = await this.prisma.wikiPage.findMany({
+        where: { repoId },
+        orderBy: { order: 'asc' },
+        select: { id: true, title: true, slug: true, parentId: true },
+      });
 
       const concurrency = Number(process.env.INDEX_CONCURRENCY ?? 4);
       let done = 0;
 
       await runPool(pages, concurrency, async (page) => {
         if (abort.signal.aborted) return;
-        await this.generatePage(repo, page, allTitles, preset, abort.signal);
+        await this.generatePage(repo, page, allPages, preset, abort.signal);
         done++;
         this.emit(repoId, 'progress', { done, total: pages.length });
       });
@@ -232,7 +234,7 @@ export class IndexerService {
   private async generatePage(
     repo: { id: string; path: string; name: string },
     page: { id: string; title: string; summary: string | null; hint: string | null; parentId: string | null },
-    allTitles: string[],
+    allPages: { id: string; title: string; slug: string; parentId: string | null }[],
     presetKey: string,
     signal: AbortSignal,
   ) {
@@ -254,9 +256,13 @@ export class IndexerService {
     });
     this.emit(repo.id, 'page', { pageId: page.id, title: page.title, status: 'GENERATING' });
 
-    const parent = page.parentId
-      ? await this.prisma.wikiPage.findUnique({ where: { id: page.parentId }, select: { title: true } })
-      : null;
+    const parent = allPages.find((p) => p.id === page.parentId) ?? null;
+    const children = allPages
+      .filter((p) => p.parentId === page.id)
+      .map((p) => ({ title: p.title, slug: p.slug }));
+    const siblings = allPages
+      .filter((p) => p.id !== page.id)
+      .map((p) => ({ title: p.title, slug: p.slug }));
 
     try {
       const result = await this.agents.run(
@@ -269,7 +275,8 @@ export class IndexerService {
             title: page.title,
             summary: page.summary ?? undefined,
             hint: page.hint ?? undefined,
-            outlineTitles: allTitles,
+            siblings,
+            children,
             parentTitle: parent?.title,
           }),
           signal,
@@ -359,11 +366,20 @@ export class IndexerService {
   }
 }
 
-/** Strip a leading "here is the page" preamble and stray outer code fences. */
-function cleanMarkdown(text: string): string {
+/**
+ * Strip stray outer code fences and any conversational preamble the agent emits
+ * before the page itself ("Have enough. Writing the page now.").
+ */
+export function cleanMarkdown(text: string): string {
   let out = text.trim();
+
   const fenced = out.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n```$/);
   if (fenced) out = fenced[1].trim();
-  out = out.replace(/^(?:here(?:'s| is)[^\n]*\n+)/i, '');
+
+  // The prompt requires the page to start with an H1, so anything before the
+  // first one is chatter rather than content.
+  const h1 = out.search(/^# .+$/m);
+  if (h1 > 0) out = out.slice(h1);
+
   return out.trim();
 }
