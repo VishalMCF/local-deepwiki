@@ -1,0 +1,18 @@
+{
+  "name": "deepwiki-local",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "setup": "pnpm install && pnpm db:up && sleep 4 && pnpm --filter api prisma:push && pnpm --filter api seed",
+    "dev": "concurrently -n api,web -c cyan,magenta \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
+    "build": "pnpm --filter api build && pnpm --filter web build",
+    "test": "pnpm --filter api test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "packageManager": "pnpm@9.15.4"
+}

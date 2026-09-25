@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RepoStatus {
+  PENDING
+  INDEXING
+  READY
+  FAILED
+}
+
+enum PageStatus {
+  PENDING
+  GENERATING
+  READY
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+enum MessageStatus {
+  PENDING
+  STREAMING
+  COMPLETE
+  FAILED
+}
+
+enum JobKind {
+  OUTLINE
+  PAGE
+  REFRESH
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+model Repo {
+  id            String     @id @default(uuid())
+  slug          String     @unique
+  name          String
+  path          String     @unique
+  description   String?
+  language      String?
+  fileCount     Int?
+  gitRemote     String?
+  gitBranch     String?
+  indexedSha    String?
+  headSha       String?
+  indexedAt     DateTime?
+  status        RepoStatus @default(PENDING)
+  error         String?
+  defaultPreset String     @default("fast")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  pages   WikiPage[]
+  threads Thread[]
+  jobs    Job[]
+}
+
+model WikiPage {
+  id          String     @id @default(uuid())
+  repoId      String
+  repo        Repo       @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      WikiPage?  @relation("PageTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    WikiPage[] @relation("PageTree")
+  slug        String
+  title       String
+  summary     String?
+  hint        String?
+  order       Int        @default(0)
+  content     String?
+  status      PageStatus @default(PENDING)
+  error       String?
+  scannedFiles String[]  @default([])
+  presetKey   String?
+  durationMs  Int?
+  generatedAt DateTime?
+  createdAt   DateTime   @default(now())
+
+  citations Citation[]
+
+  @@unique([repoId, slug])
+  @@index([repoId, order])
+}
+
+model Citation {
+  id        String   @id @default(uuid())
+  pageId    String?
+  page      WikiPage? @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  messageId String?
+  message   Message?  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  path      String
+  startLine Int?
+  endLine   Int?
+  verified  Boolean  @default(false)
+  order     Int      @default(0)
+
+  @@index([pageId])
+  @@index([messageId])
+}
+
+model Thread {
+  id        String   @id @default(uuid())
+  repoId    String
+  repo      Repo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  title     String
+  presetKey String   @default("fast")
+  sessionId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([repoId, updatedAt])
+}
+
+model Message {
+  id           String        @id @default(uuid())
+  threadId     String
+  thread       Thread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role         MessageRole
+  content      String        @default("")
+  status       MessageStatus @default(COMPLETE)
+  presetKey    String?
+  sessionId    String?
+  scannedFiles String[]      @default([])
+  error        String?
+  durationMs   Int?
+  createdAt    DateTime      @default(now())
+
+  citations Citation[]
+
+  @@index([threadId, createdAt])
+}
+
+model AgentPreset {
+  key      String  @id
+  label    String
+  cli      String
+  model    String?
+  effort   String?
+  hint     String?
+  enabled  Boolean @default(true)
+  order    Int     @default(0)
+  isDefault Boolean @default(false)
+}
+
+model Job {
+  id         String    @id @default(uuid())
+  repoId     String
+  repo       Repo      @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  kind       JobKind
+  status     JobStatus @default(QUEUED)
+  pageId     String?
+  label      String?
+  error      String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([repoId, createdAt])
+}

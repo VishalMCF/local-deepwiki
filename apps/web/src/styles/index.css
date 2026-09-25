@@ -1,0 +1,211 @@
+@import 'tailwindcss';
+
+/* Tokens are plain CSS vars so the theme can be swapped at runtime; @theme
+   inline re-exports them as Tailwind utilities (bg-canvas, text-muted, ...). */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-ring: var(--ring);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root,
+[data-theme='light'] {
+  --canvas: #f7f7f5;
+  --surface: #ffffff;
+  --elevated: #efefed;
+  --line: #e2e2de;
+  --line-soft: #ededea;
+  --fg: #16161a;
+  --muted: #61615c;
+  --faint: #8e8e88;
+  --accent: #3b5bfc;
+  --accent-fg: #ffffff;
+  --ring: rgba(59, 91, 252, 0.35);
+  --danger: #c0392b;
+  --success: #1f9254;
+}
+
+[data-theme='dark'] {
+  --canvas: #0a0a0a;
+  --surface: #101010;
+  --elevated: #1a1a1a;
+  --line: #262626;
+  --line-soft: #1c1c1c;
+  --fg: #ededed;
+  --muted: #9a9a9a;
+  --faint: #6b6b6b;
+  --accent: #3b5bfc;
+  --accent-fg: #ffffff;
+  --ring: rgba(59, 91, 252, 0.45);
+  --danger: #ff6b5e;
+  --success: #3fbf7f;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The faint vertical rules framing the page in the reference UI. */
+.page-frame {
+  border-left: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+  border: 3px solid var(--canvas);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+  100% { opacity: 0.45; }
+}
+.skeleton {
+  background: var(--elevated);
+  border-radius: 6px;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up {
+  animation: fade-up 0.25s ease-out both;
+}
+
+/* --- markdown ----------------------------------------------------------- */
+.prose-wiki {
+  color: var(--fg);
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+.prose-wiki h1 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 22px;
+}
+.prose-wiki h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 38px 0 14px;
+  scroll-margin-top: 90px;
+}
+.prose-wiki h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 28px 0 10px;
+  scroll-margin-top: 90px;
+}
+.prose-wiki h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 22px 0 8px;
+}
+.prose-wiki p {
+  margin: 14px 0;
+}
+.prose-wiki ul,
+.prose-wiki ol {
+  margin: 14px 0;
+  padding-left: 24px;
+}
+.prose-wiki ul { list-style: disc; }
+.prose-wiki ol { list-style: decimal; }
+.prose-wiki li { margin: 7px 0; }
+.prose-wiki li::marker { color: var(--faint); }
+.prose-wiki a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+}
+.prose-wiki a:hover { text-decoration-color: var(--accent); }
+.prose-wiki strong { font-weight: 600; }
+.prose-wiki blockquote {
+  border-left: 2px solid var(--line);
+  margin: 16px 0;
+  padding: 2px 0 2px 16px;
+  color: var(--muted);
+}
+.prose-wiki table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 14px;
+  display: block;
+  overflow-x: auto;
+}
+.prose-wiki th,
+.prose-wiki td {
+  border: 1px solid var(--line);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-wiki th {
+  background: var(--elevated);
+  font-weight: 600;
+}
+.prose-wiki hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 28px 0;
+}
+.prose-wiki code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--elevated);
+  border: 1px solid var(--line-soft);
+  padding: 1.5px 5px;
+  border-radius: 5px;
+}
+.prose-wiki pre {
+  background: var(--elevated);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 18px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.prose-wiki pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+}

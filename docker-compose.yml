@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: deepwiki-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: deepwiki
+      POSTGRES_PASSWORD: deepwiki
+      POSTGRES_DB: deepwiki
+    ports:
+      - "5433:5432"
+    volumes:
+      - deepwiki-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deepwiki"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  deepwiki-pgdata:
