@@ -107,6 +107,13 @@ back to the default available preset rather than failing.
 | `INDEX_CONCURRENCY` | `4` | Parallel page-generation agents |
 | `AGENT_TIMEOUT_MS` | `900000` | Hard timeout per agent run |
 
+## Notes
+
+`docs/DESIGN.md` records why this uses agents rather than embeddings.
+`docs/BUGS.md` lists the bugs found while testing against real repositories,
+their causes and fixes — including two that only appear when the agent CLIs run
+on a machine with personal hooks or plugins configured.
+
 ## Safety
 
 Imported repositories are read-only. The Claude runner passes
